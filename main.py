@@ -21,6 +21,9 @@ reqUrl = f"https://www.ine.pt/ine/json_indicador/pindica.jsp?varcd={indicator}&l
 
 
 def get_parameters_range(reqUrl):
+    '''
+    Get parameters to query the API, starting from 2011 until last year available of data
+    '''
     try:
         first_year_parameter = 'S7A2011'
         response = requests.get(reqUrl+first_year_parameter)
