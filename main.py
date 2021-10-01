@@ -7,22 +7,21 @@ import glob
 import json
 from datetime import date
 
-
+# Define variables for directories and get today's date
 script_dir = os.path.dirname(__file__)
 extract_dir = os.path.join(script_dir, 'extract')
 data_dir = os.path.join(script_dir, 'data')
 today = int(date.today().strftime('%Y%m%d'))
 
-
+# Define indicator to get data and API endpoint. Parameter for first year of data (Dim1) is 'S7A2011'
 indicator = '0008074'
-
-
 reqUrl = f"https://www.ine.pt/ine/json_indicador/pindica.jsp?varcd={indicator}&lang=EN&op=2&Dim1="
 
 
-def get_parameters_range(reqUrl):
+def get_parameters_range(reqUrl: str) -> list:
     '''
-    Get parameters to query the API, starting from 2011 until last year available of data
+    Get parameters to query the API, starting from 2011 until last year available of data. 
+    This returns a list of parameters with available years to get data in the API
     '''
     try:
         first_year_parameter = 'S7A2011'
@@ -48,7 +47,11 @@ def get_parameters_range(reqUrl):
     return parameters_list
 
 
-def get_raw_data(reqUrl, parameters_list):
+def get_raw_data(reqUrl: str, parameters_list: list) -> dict:
+    '''
+    Query the API for each element (year) in parameters_list, starting from 2011 until last year available.
+    Returns a dictionary with data for all available years.
+    '''
     data = {}
     for item in parameters_list:
         try:
@@ -71,19 +74,26 @@ def get_raw_data(reqUrl, parameters_list):
     return data
 
 
-def load_raw_data(raw_data):
-
+def load_raw_data(raw_data: dict) -> None:
+    '''
+    Load raw data in '/extract' directory
+    '''
     if not os.path.exists(extract_dir):
         os.makedirs(extract_dir)
 
     output_file = os.path.join(extract_dir, f'extract-{today}.json')
     with open(output_file, 'w') as f:
         json.dump(raw_data,f)
-        print(f'Extraction loaded in extract folder')
+        print(f'Raw data loaded: {output_file}')
+
+    return None
 
 
 
-def transform_raw_data(extract_path):
+def transform_raw_data(extract_path: str) -> pd.DataFrame:
+    """
+    Transform raw data, flattening the nested json in a dataframe, removing unnecessary columns and adding new ones.
+    """
     output_file = max(glob.glob(extract_path+"/*"), key=os.path.getmtime)
     print(f'Following file is being transformed: {output_file}')
     with open(output_file) as f:
@@ -107,26 +117,30 @@ def transform_raw_data(extract_path):
     return df
     
 
-def load_clean_data(clean_data):
-
+def load_clean_data(clean_data: pd.DataFrame) -> None:
+    """
+    Load clean data, in a dataframe format, in '/data' directory.
+    This will store the data as a csv file.
+    """
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
     
     output_file = os.path.join(data_dir, f'data-{today}.csv')
     clean_data.to_csv(output_file, index=False)
-    print('Clean data loaded in data folder')
+    print(f'Clean data loaded: {output_file}')
+
+    return None
 
 
 
 if __name__ == "__main__":
 
     parameters = get_parameters_range(reqUrl)
+    
     raw_data = get_raw_data(reqUrl,parameters)
-
     load_raw_data(raw_data)
 
     clean_data = transform_raw_data(extract_dir)
-
     load_clean_data(clean_data)
 
 
